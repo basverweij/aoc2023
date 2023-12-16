@@ -8,6 +8,8 @@ internal sealed partial record Card(
     IReadOnlySet<int> Winning,
     IReadOnlySet<int> Have)
 {
+    internal int HaveWinningCount => Have.Intersect(Winning).Count();
+
     internal static Card Parse(
         string line)
     {
@@ -18,7 +20,7 @@ internal sealed partial record Card(
             throw new ArgumentException("invalid line", nameof(line));
         }
 
-        var index = int.Parse(match.Groups[nameof(Card.Index)].ValueSpan);
+        var index = int.Parse(match.Groups[nameof(Card.Index)].ValueSpan) - 1;
 
         var winning = ParseNumbers(match.Groups[nameof(Card.Winning)]);
 

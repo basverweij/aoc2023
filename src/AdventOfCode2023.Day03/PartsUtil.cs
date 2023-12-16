@@ -4,22 +4,22 @@ namespace AdventOfCode2023.Day03;
 
 internal static partial class PartsUtil
 {
-    internal static int[] GetPartNumbers(
+    internal static (int partNumber, Symbol symbol)[] GetPartNumbers(
         int row,
         string[] lines)
     {
-        var partNumbers = new List<int>();
+        var partNumbers = new List<(int, Symbol)>();
 
         var matches = PartNumbers().Matches(lines[row]).OfType<Match>();
 
         foreach (var match in matches)
         {
-            if (!lines.IsAdjacentToSymbol(row, match.Index, match.Index + match.Length - 1))
+            if (!lines.IsAdjacentToSymbol(row, match.Index, match.Index + match.Length - 1, out var symbol))
             {
                 continue;
             }
 
-            partNumbers.Add(int.Parse(match.ValueSpan));
+            partNumbers.Add((int.Parse(match.ValueSpan), symbol));
         }
 
         return [.. partNumbers];
@@ -29,31 +29,34 @@ internal static partial class PartsUtil
         this string[] @this,
         int row,
         int columnFromInclusive,
-        int columnToInclusive)
+        int columnToInclusive,
+        out Symbol symbol)
     {
         int fromRowInclusive = row == 0 ? row : row - 1;
 
         int toRowInclusive = row == @this.Length - 1 ? row : row + 1;
 
-        if (columnFromInclusive > 0 && @this.HasSymbolInColumn(columnFromInclusive - 1, fromRowInclusive, toRowInclusive))
+        if (columnFromInclusive > 0 && @this.HasSymbolInColumn(columnFromInclusive - 1, fromRowInclusive, toRowInclusive, out symbol))
         {
             return true;
         }
 
-        if (columnToInclusive < @this[row].Length - 1 && @this.HasSymbolInColumn(columnToInclusive + 1, fromRowInclusive, toRowInclusive))
+        if (columnToInclusive < @this[row].Length - 1 && @this.HasSymbolInColumn(columnToInclusive + 1, fromRowInclusive, toRowInclusive, out symbol))
         {
             return true;
         }
 
-        if (row > 0 && @this.HasSymbolInRow(row - 1, columnFromInclusive, columnToInclusive))
+        if (row > 0 && @this.HasSymbolInRow(row - 1, columnFromInclusive, columnToInclusive, out symbol))
         {
             return true;
         }
 
-        if (row < @this.Length - 1 && @this.HasSymbolInRow(row + 1, columnFromInclusive, columnToInclusive))
+        if (row < @this.Length - 1 && @this.HasSymbolInRow(row + 1, columnFromInclusive, columnToInclusive, out symbol))
         {
             return true;
         }
+
+        symbol = Symbol.None;
 
         return false;
     }
@@ -62,7 +65,8 @@ internal static partial class PartsUtil
         this string[] @this,
         int column,
         int fromRowInclusive,
-        int toRowInclusive)
+        int toRowInclusive,
+        out Symbol symbol)
     {
         for (var row = fromRowInclusive; row <= toRowInclusive; row++)
         {
@@ -70,9 +74,13 @@ internal static partial class PartsUtil
 
             if ((c < '0' || c > '9') && c != '.')
             {
+                symbol = new(c, row, column);
+
                 return true;
             }
         }
+
+        symbol = Symbol.None;
 
         return false;
     }
@@ -81,7 +89,8 @@ internal static partial class PartsUtil
         this string[] @this,
         int row,
         int fromColumnInclusive,
-        int toColumnInclusive)
+        int toColumnInclusive,
+        out Symbol symbol)
     {
         for (var column = fromColumnInclusive; column <= toColumnInclusive; column++)
         {
@@ -89,9 +98,13 @@ internal static partial class PartsUtil
 
             if ((c < '0' || c > '9') && c != '.')
             {
+                symbol = new(c, row, column);
+
                 return true;
             }
         }
+
+        symbol = Symbol.None;
 
         return false;
     }

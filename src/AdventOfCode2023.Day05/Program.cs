@@ -12,6 +12,14 @@ var puzzle1 = locations.Min();
 
 Console.WriteLine($"Day 5 - Puzzle 1: {puzzle1}");
 
+var seedRanges = seeds.Chunk(2).Select(c => new Range(c[0], c[1])).ToImmutableArray();
+
+var locationRanges = seedRanges.SelectMany(r => MapSeedRange(mappings, r));
+
+var puzzle2 = locationRanges.Min(r => r.Start);
+
+Console.WriteLine($"Day 5 - Puzzle 2: {puzzle2}");
+
 static ImmutableArray<long> ParseNumbers(
     string value) =>
     value
@@ -63,7 +71,25 @@ static long MapSeed(
     do
     {
         value = mapping.Map(value);
-    } while (mappings.TryGetValue(mapping.To, out mapping));
+    }
+    while (mappings.TryGetValue(mapping.To, out mapping));
 
     return value;
+}
+
+static IEnumerable<Range> MapSeedRange(
+    Dictionary<string, Mapping> mappings,
+    Range range)
+{
+    var ranges = ImmutableArray.Create(range);
+
+    var mapping = mappings["seed"];
+
+    do
+    {
+        ranges = ranges.SelectMany(r => mapping.MapRange(r)).ToImmutableArray();
+    }
+    while (mappings.TryGetValue(mapping.To, out mapping));
+
+    return ranges;
 }

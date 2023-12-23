@@ -1,6 +1,7 @@
-using System.Collections.Frozen;
-
 using AdventOfCode2023.Day08;
+
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 
 var lines = await File.ReadAllLinesAsync("input.txt");
 
@@ -19,43 +20,44 @@ for (; node.Name != "ZZZ"; steps++)
 
 Console.WriteLine($"Day 8 - Puzzle 1: {steps}");
 
-var (leftNodes, rightNodes, endNodes) = (new ushort[17_576], new ushort[17_576], new bool[17_576]);
+var startNodes = nodes.Values.Where(n => n.Name.EndsWith('A')).ToImmutableArray();
 
-foreach (var n in nodes.Values)
+var nodeSteps = new int[startNodes.Length];
+
+for (var i = 0; i < startNodes.Length; i++)
 {
-    leftNodes[n.Index] = nodes[n.Left].Index;
+    (instructionPointer, steps) = (0, 0);
 
-    rightNodes[n.Index] = nodes[n.Right].Index;
+    node = startNodes[i];
 
-    endNodes[n.Index] = n.Name.EndsWith('Z');
-}
-
-(instructionPointer, steps, var indexes) = (0, 1, nodes.Values.Where(n => n.Name.EndsWith('A')).Select(n => n.Index).ToArray());
-
-for (; ; steps++)
-{
-    if (steps % 100_000_000 == 0) { Console.WriteLine(steps); }
-
-    var goLeft = instructions[instructionPointer] == 'L';
-
-    var allEndNodes = true;
-
-    for (var i = 0; i < indexes.Length; i++)
+    for (; !node.Name.EndsWith('Z'); steps++)
     {
-        indexes[i] = goLeft ? leftNodes[indexes[i]] : rightNodes[indexes[i]];
+        node = instructions[instructionPointer] == 'L' ? nodes[node.Left] : nodes[node.Right];
 
-        if (!endNodes[indexes[i]])
-        {
-            allEndNodes = false;
-        }
+        instructionPointer = (instructionPointer + 1) % instructions.Length;
     }
 
-    if (allEndNodes)
-    {
-        break;
-    }
-
-    instructionPointer = (instructionPointer + 1) % instructions.Length;
+    nodeSteps[i] = steps;
 }
 
-Console.WriteLine($"Day 8 - Puzzle 2: {steps}");
+var puzzle2 = Lcm(nodeSteps);
+
+Console.WriteLine($"Day 8 - Puzzle 2: {puzzle2}");
+
+static long Lcm(
+    int[] values)
+{
+    long lcm = values[0];
+
+    for (var i = 1; i < values.Length; i++)
+    {
+        lcm *= values[i] / Gcd(lcm, values[i]);
+    }
+
+    return lcm;
+}
+
+static long Gcd(
+    long a,
+    long b) =>
+    b == 0 ? a : Gcd(b, a % b);

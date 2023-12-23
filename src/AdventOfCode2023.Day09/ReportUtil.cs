@@ -5,6 +5,24 @@ internal static class ReportUtil
     internal static long Extrapolate(
         long[] report)
     {
+        var deltas = GetDeltas(report);
+
+        return deltas.Sum(d => d[^1]);
+    }
+
+    internal static long ExtrapolateBackwards(
+        long[] report)
+    {
+        var deltas = GetDeltas(report);
+
+        deltas.Reverse();
+
+        return deltas.Aggregate(0L, (a, delta) => delta[0] - a);
+    }
+
+    private static List<long[]> GetDeltas(
+        long[] report)
+    {
         var deltas = new List<long[]>()
         {
             report,
@@ -38,6 +56,6 @@ internal static class ReportUtil
             previous = delta;
         }
 
-        return deltas.Sum(d => d[^1]);
+        return deltas;
     }
 }

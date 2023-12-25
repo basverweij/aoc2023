@@ -1,7 +1,5 @@
 using AdventOfCode2023.Day10;
 
-using Point = (int x, int y);
-
 var lines = await File.ReadAllLinesAsync("input.txt");
 
 var grid = lines.Select(line => line.ToCharArray()).ToArray();
@@ -25,26 +23,28 @@ var puzzle1 = loop.Count / 2;
 
 Console.WriteLine($"Day 10 - Puzzle 1: {puzzle1}");
 
+var isClockwise = AngleUtil.IsClockwise(loop);
+
 var (up, down, left, right) = (Up(), Down(grid.Length), Left(), Right(grid[0].Length));
 
 var enclosed = new HashSet<Point>();
 
-var loopArray = loop.ToArray();
+previous = loop.First();
 
-for (var i = 1; i < loopArray.Length; i++)
+foreach (var point in loop.Skip(1))
 {
-    var (deltaX, deltaY) = (loopArray[i].x - loopArray[i - 1].x, loopArray[i].y - loopArray[i - 1].y);
+    var delta = (point.x - previous.x, point.y - previous.y);
 
-    var (iterator, condition) = (deltaX, deltaY) switch
+    var (iterator, condition) = delta switch
     {
-        (1, 0) => down,
-        (-1, 0) => up,
-        (0, -1) => right,
-        (0, 1) => left,
-        _ => throw new InvalidOperationException($"invalid loop point delta: ({deltaX}, {deltaY})"),
+        (1, 0) => isClockwise ? down : up,
+        (-1, 0) => isClockwise ? up : down,
+        (0, -1) => isClockwise ? right : left,
+        (0, 1) => isClockwise ? left : right,
+        _ => throw new InvalidOperationException($"invalid loop point delta: {delta}"),
     };
 
-    for (var p = iterator(loopArray[i]); condition(p); p = iterator(p))
+    for (var p = iterator(previous); condition(p); p = iterator(p))
     {
         if (loop.Contains(p))
         {
@@ -53,6 +53,18 @@ for (var i = 1; i < loopArray.Length; i++)
 
         enclosed.Add(p);
     }
+
+    for (var p = iterator(point); condition(p); p = iterator(p))
+    {
+        if (loop.Contains(p))
+        {
+            break;
+        }
+
+        enclosed.Add(p);
+    }
+
+    previous = point;
 }
 
 var puzzle2 = enclosed.Count;

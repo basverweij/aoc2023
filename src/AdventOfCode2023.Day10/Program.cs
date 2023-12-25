@@ -25,29 +25,37 @@ var puzzle1 = loop.Count / 2;
 
 Console.WriteLine($"Day 10 - Puzzle 1: {puzzle1}");
 
-var (minY, maxY) = (loop.MinBy(p => p.y).y, loop.MaxBy(p => p.y).y);
+var (up, down, left, right) = (Up(), Down(grid.Length), Left(), Right(grid[0].Length));
 
-var (minX, maxX) = (loop.MinBy(p => p.x).x, loop.MaxBy(p => p.x).x);
+var enclosed = new HashSet<Point>();
 
-var puzzle2 = 0;
+var loopArray = loop.ToArray();
 
-for (var y = minY; y <= maxY; y++)
+for (var i = 1; i < loopArray.Length; i++)
 {
-    for (var x = minX; x <= maxX; x++)
+    var (deltaX, deltaY) = (loopArray[i].x - loopArray[i - 1].x, loopArray[i].y - loopArray[i - 1].y);
+
+    var (iterator, condition) = (deltaX, deltaY) switch
     {
-        if (loop.Contains((x, y)))
+        (1, 0) => down,
+        (-1, 0) => up,
+        (0, -1) => right,
+        (0, 1) => left,
+        _ => throw new InvalidOperationException($"invalid loop point delta: ({deltaX}, {deltaY})"),
+    };
+
+    for (var p = iterator(loopArray[i]); condition(p); p = iterator(p))
+    {
+        if (loop.Contains(p))
         {
-            continue;
+            break;
         }
 
-        if (IsEnclosed(grid, loop, x, y))
-        {
-            Console.WriteLine((x, y));
-
-            puzzle2++;
-        }
+        enclosed.Add(p);
     }
 }
+
+var puzzle2 = enclosed.Count;
 
 Console.WriteLine($"Day 10 - Puzzle 2: {puzzle2}");
 
@@ -104,32 +112,16 @@ static IEnumerable<Point> GetNeighbours(
     }
 }
 
-static bool IsEnclosed(
-    char[][] grid,
-    IReadOnlySet<Point> loop,
-    int x,
-    int y)
-{
-    var (crossings, onCrossing) = (0, false);
+static (Func<Point, Point> iterator, Func<Point, bool> condition) Up() =>
+    (p => (p.x, p.y - 1), p => p.y >= 0);
 
-    for (var i = x - 1; i >= 0; i--)
-    {
-        var onLoop = loop.Contains((i, y));
+static (Func<Point, Point> iterator, Func<Point, bool> condition) Down(
+    int maxY) =>
+    (p => (p.x, p.y + 1), p => p.y < maxY);
 
-        var connected = grid[y][i].GetConnections().HasFlag(Connections.East);
+static (Func<Point, Point> iterator, Func<Point, bool> condition) Left() =>
+    (p => (p.x - 1, p.y), p => p.x >= 0);
 
-        switch (onCrossing, onLoop, connected)
-        {
-            case (false, true, _): onCrossing = true; break;
-            case (true, true, false): crossings++; break;
-            case (true, false, _): onCrossing = false; crossings++; break;
-        }
-    }
-
-    if (onCrossing)
-    {
-        crossings++;
-    }
-
-    return crossings % 2 == 1;
-}
+static (Func<Point, Point> iterator, Func<Point, bool> condition) Right(
+    int maxX) =>
+    (p => (p.x + 1, p.y), p => p.x < maxX);

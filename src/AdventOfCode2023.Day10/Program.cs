@@ -8,20 +8,48 @@ var grid = lines.Select(line => line.ToCharArray()).ToArray();
 
 var startingPoint = FindStartingPoint(grid);
 
-var candidate = GetNeighbours(grid, startingPoint).First();
+var (previous, current) = (startingPoint, GetNeighbours(grid, startingPoint).First());
 
-var (previous, current) = (startingPoint, candidate);
+var loop = new HashSet<Point>()
+{
+    startingPoint,
+    current,
+};
 
-var length = 0;
-
-for (; current != startingPoint; length++)
+for (; current != startingPoint; loop.Add(current))
 {
     (previous, current) = (current, GetNeighbours(grid, current).Single(n => n != previous));
 }
 
-var puzzle1 = length / 2 + (length % 2 == 0 ? 0 : 1);
+var puzzle1 = loop.Count / 2;
 
 Console.WriteLine($"Day 10 - Puzzle 1: {puzzle1}");
+
+var (minY, maxY) = (loop.MinBy(p => p.y).y, loop.MaxBy(p => p.y).y);
+
+var (minX, maxX) = (loop.MinBy(p => p.x).x, loop.MaxBy(p => p.x).x);
+
+var puzzle2 = 0;
+
+for (var y = minY; y <= maxY; y++)
+{
+    for (var x = minX; x <= maxX; x++)
+    {
+        if (loop.Contains((x, y)))
+        {
+            continue;
+        }
+
+        if (IsEnclosed(grid, loop, x, y))
+        {
+            Console.WriteLine((x, y));
+
+            puzzle2++;
+        }
+    }
+}
+
+Console.WriteLine($"Day 10 - Puzzle 2: {puzzle2}");
 
 static Point FindStartingPoint(
     char[][] grid)
@@ -74,4 +102,34 @@ static IEnumerable<Point> GetNeighbours(
     {
         yield return (point.x - 1, point.y);
     }
+}
+
+static bool IsEnclosed(
+    char[][] grid,
+    IReadOnlySet<Point> loop,
+    int x,
+    int y)
+{
+    var (crossings, onCrossing) = (0, false);
+
+    for (var i = x - 1; i >= 0; i--)
+    {
+        var onLoop = loop.Contains((i, y));
+
+        var connected = grid[y][i].GetConnections().HasFlag(Connections.East);
+
+        switch (onCrossing, onLoop, connected)
+        {
+            case (false, true, _): onCrossing = true; break;
+            case (true, true, false): crossings++; break;
+            case (true, false, _): onCrossing = false; crossings++; break;
+        }
+    }
+
+    if (onCrossing)
+    {
+        crossings++;
+    }
+
+    return crossings % 2 == 1;
 }

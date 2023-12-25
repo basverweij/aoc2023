@@ -1,1 +1,1 @@
-global using Point = (int x, int y);
+global using Point = (long x, long y);

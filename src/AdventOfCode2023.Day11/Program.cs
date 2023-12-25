@@ -4,13 +4,21 @@ var space = lines.Select(line => line.ToCharArray()).ToArray();
 
 var galaxies = FindGalaxies(space).ToArray();
 
-galaxies = ExpandSpace(galaxies).ToArray();
+var expandedGalaxies = ExpandSpace(galaxies).ToArray();
 
-var pairs = BuildPairs(galaxies).ToArray();
+var pairs = BuildPairs(expandedGalaxies).ToArray();
 
 var puzzle1 = pairs.Select(p => Distance(p.Item1, p.Item2)).Sum();
 
 Console.WriteLine($"Day 11 - Puzzle 1: {puzzle1}");
+
+expandedGalaxies = ExpandSpace(galaxies, 1_000_000).ToArray();
+
+pairs = BuildPairs(expandedGalaxies).ToArray();
+
+var puzzle2 = pairs.Select(p => Distance(p.Item1, p.Item2)).Sum();
+
+Console.WriteLine($"Day 11 - Puzzle 2: {puzzle2}");
 
 static IEnumerable<Point> FindGalaxies(
     char[][] space)
@@ -28,7 +36,8 @@ static IEnumerable<Point> FindGalaxies(
 }
 
 static IEnumerable<Point> ExpandSpace(
-    IEnumerable<Point> galaxies)
+    IEnumerable<Point> galaxies,
+    int rate = 2)
 {
     var xs = galaxies.Select(g => g.x).ToHashSet();
 
@@ -40,7 +49,7 @@ static IEnumerable<Point> ExpandSpace(
 
         var expandY = galaxy.y - ys.Count(y => y < galaxy.y);
 
-        yield return (galaxy.x + expandX, galaxy.y + expandY);
+        yield return (galaxy.x + expandX * (rate - 1), galaxy.y + expandY * (rate - 1));
     }
 }
 
@@ -56,7 +65,7 @@ static IEnumerable<(Point, Point)> BuildPairs(
     }
 }
 
-static int Distance(
+static long Distance(
     Point a,
     Point b) =>
     Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);

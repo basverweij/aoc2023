@@ -1,5 +1,6 @@
-﻿using System.Collections.Immutable;
-using AdventOfCode2023.Day04;
+﻿using AdventOfCode2023.Day04;
+
+using System.Collections.Immutable;
 
 var lines = await File.ReadAllLinesAsync("input.txt");
 

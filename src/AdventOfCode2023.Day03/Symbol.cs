@@ -1,5 +1,3 @@
-using System.Diagnostics.Tracing;
-
 namespace AdventOfCode2023.Day03;
 
 internal sealed record Symbol(

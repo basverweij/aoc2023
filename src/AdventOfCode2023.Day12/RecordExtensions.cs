@@ -13,7 +13,9 @@ internal static partial class RecordExtensions
 
         Console.WriteLine($"{string.Join(" ", @this.GroupLengths)} -> {string.Join(" ", sections)}");
 
-        var splitSections = SplitSections(@this.GroupLengths, sections);
+        var splitSections = SplitSections(@this.GroupLengths, sections).DistinctBy(s => string.Join(" ", s));
+
+        Console.WriteLine($"Split Sections: {string.Join(", ", splitSections.Select(s => string.Join(" ", s)))}");
 
         return splitSections.Sum(s => GetArrangementCount(@this.GroupLengths, s));
     }
@@ -24,13 +26,12 @@ internal static partial class RecordExtensions
         int[] groupLengths,
         string[] sections)
     {
-        Console.WriteLine($"Splitting {string.Join(" ", sections)} to match {string.Join(" ", groupLengths)}");
-
         if (groupLengths.Length == sections.Length)
         {
-            // no need to split as already same length
-
-            yield return sections;
+            if (IsValidSections(groupLengths, sections))
+            {
+                yield return sections;
+            }
 
             yield break;
         }
@@ -52,14 +53,12 @@ internal static partial class RecordExtensions
 
                     Array.Copy(sections, splitSections, sections.Length);
 
-                    splitSections[j] = splitSections[j][1..];
+                    splitSections[i] = splitSections[i][1..];
 
                     foreach (var s in SplitSections(groupLengths, splitSections))
                     {
                         yield return s;
                     }
-
-                    yield break;
                 }
 
                 if (j == sections[i].Length - 1)
@@ -68,7 +67,7 @@ internal static partial class RecordExtensions
 
                     Array.Copy(sections, splitSections, sections.Length);
 
-                    splitSections[j] = splitSections[j][..^1];
+                    splitSections[i] = splitSections[i][..^1];
 
                     foreach (var s in SplitSections(groupLengths, splitSections))
                     {
@@ -100,11 +99,24 @@ internal static partial class RecordExtensions
                     {
                         yield return s;
                     }
-
-                    yield break;
                 }
             }
         }
+    }
+
+    private static bool IsValidSections(
+        int[] groupLengths,
+        string[] sections)
+    {
+        for (var i = 0; i < groupLengths.Length; i++)
+        {
+            if (groupLengths[i] > sections[i].Length)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static int GetArrangementCount(
@@ -121,7 +133,7 @@ internal static partial class RecordExtensions
     {
         if (groupLength > section.Length)
         {
-            throw new ArgumentException($"invalid section: must be at least ${section.Length} long", nameof(section));
+            throw new ArgumentException($"invalid section: must be at least {section.Length} long", nameof(section));
         }
 
         var first = section.IndexOf('#');

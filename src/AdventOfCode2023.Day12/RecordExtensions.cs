@@ -1,153 +1,116 @@
-using System.Text.RegularExpressions;
-
 namespace AdventOfCode2023.Day12;
 
-internal static partial class RecordExtensions
+internal static class RecordExtensions
 {
     internal static int GetArrangementCount(
         this Record @this)
     {
-        var springs = @this.Springs.Trim('.');
+        var springs = @this.Springs.TrimEnd('.');
 
-        var sections = Splitter().Split(springs);
+        var sections = new Range[@this.GroupLengths.Length];
 
-        Console.WriteLine($"{string.Join(" ", @this.GroupLengths)} -> {string.Join(" ", sections)}");
+        var sectionCount = springs.AsSpan().Split(sections, '.', StringSplitOptions.RemoveEmptyEntries);
 
-        var splitSections = SplitSections(@this.GroupLengths, sections).DistinctBy(s => string.Join(" ", s));
+        Console.WriteLine($"{@this.Springs}: {string.Join(" ", @this.GroupLengths)} -> {string.Join(" ", sections)}");
+
+        var splitSections = @this
+            .SplitSections(sections[..sectionCount])
+            .DistinctBy(s => string.Join(" ", s))
+            .ToArray();
 
         Console.WriteLine($"Split Sections: {string.Join(", ", splitSections.Select(s => string.Join(" ", s)))}");
 
-        return splitSections.Sum(s => GetArrangementCount(@this.GroupLengths, s));
+        return splitSections.Sum(s => @this.GetArrangementCount(s));
     }
 
     #region Internal
 
-    private static IEnumerable<string[]> SplitSections(
-        int[] groupLengths,
-        string[] sections)
+    private static IEnumerable<Range[]> SplitSections(
+        this Record @this,
+        Range[] sections)
     {
-        if (groupLengths.Length == sections.Length)
+        for (var i = 0; i < sections.Length; i++)
         {
-            if (IsValidSections(groupLengths, sections))
+            if (@this.GroupLengths[i] > sections[i].GetOffsetAndLength(@this.Springs.Length).Length)
             {
-                yield return sections;
+                yield break;
             }
-
-            yield break;
         }
 
-        if (groupLengths.Sum() > sections.Sum(s => s.Length) - (groupLengths.Length - sections.Length))
+        if (@this.GroupLengths.Length == sections.Length)
         {
-            // cannot split without making at least one section too small
+            yield return sections;
 
             yield break;
         }
+
+        Console.WriteLine($"Splitting Sections: {@this.Springs}: {string.Join(" ", @this.GroupLengths)} -> {string.Join(", ", sections.Select(s => string.Join(" ", s)))}");
 
         for (var i = 0; i < sections.Length; i++)
         {
-            for (var j = sections[i].IndexOf('?'); j != -1; j = sections[i].IndexOf('?', j + 1))
+            for (var j = @this.Springs[sections[i]].IndexOf('?', 1); j != -1; j = @this.Springs[sections[i]].IndexOf('?', j + 1))
             {
-                if (j == 0)
+                if (j == sections[i].GetOffsetAndLength(@this.Springs.Length).Length - 1 ||
+                    j < @this.GroupLengths[i])
                 {
-                    var splitSections = new string[sections.Length];
-
-                    Array.Copy(sections, splitSections, sections.Length);
-
-                    splitSections[i] = splitSections[i][1..];
-
-                    foreach (var s in SplitSections(groupLengths, splitSections))
-                    {
-                        yield return s;
-                    }
+                    continue;
                 }
 
-                if (j == sections[i].Length - 1)
+                var splitSections = new Range[sections.Length + 1];
+
+                if (i > 0)
                 {
-                    var splitSections = new string[sections.Length];
-
-                    Array.Copy(sections, splitSections, sections.Length);
-
-                    splitSections[i] = splitSections[i][..^1];
-
-                    foreach (var s in SplitSections(groupLengths, splitSections))
-                    {
-                        yield return s;
-                    }
-
-                    yield break;
+                    Array.Copy(sections, splitSections, i);
                 }
 
-                if (j >= groupLengths[i])
+                splitSections[i] = new Range(sections[i].Start, sections[i].Start.Value + j);
+
+                splitSections[i + 1] = new Range(sections[i].Start.Value + j + 1, sections[i].End);
+
+                if (i < sections.Length - 1)
                 {
-                    var splitSections = new string[sections.Length + 1];
+                    Array.Copy(sections, i + 1, splitSections, i + 2, sections.Length - i - 1);
+                }
 
-                    if (i > 0)
-                    {
-                        Array.Copy(sections, splitSections, i);
-                    }
-
-                    splitSections[i] = sections[i][..j];
-
-                    splitSections[i + 1] = sections[i][(j + 1)..];
-
-                    if (i < sections.Length - 1)
-                    {
-                        Array.Copy(sections, i + 1, splitSections, i + 2, sections.Length - i - 1);
-                    }
-
-                    foreach (var s in SplitSections(groupLengths, splitSections))
-                    {
-                        yield return s;
-                    }
+                foreach (var s in @this.SplitSections(splitSections))
+                {
+                    yield return s;
                 }
             }
         }
     }
 
-    private static bool IsValidSections(
-        int[] groupLengths,
-        string[] sections)
-    {
-        for (var i = 0; i < groupLengths.Length; i++)
-        {
-            if (groupLengths[i] > sections[i].Length)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    private static int GetArrangementCount(
+        this Record @this,
+        Range[] sections) =>
+        sections
+            .Select((s, g) => @this.GetArrangementCount(g, s))
+            .Multiply();
 
     private static int GetArrangementCount(
-        int[] groupLengths,
-        string[] sections) =>
-        groupLengths
-        .Zip(sections)
-        .Select(zip => GetArrangementCount(zip.First, zip.Second))
-        .Multiply();
-
-    private static int GetArrangementCount(
-        int groupLength,
-        string section)
+        this Record @this,
+        int group,
+        Range section)
     {
-        if (groupLength > section.Length)
+        var (_, sectionLength) = section.GetOffsetAndLength(@this.Springs.Length);
+
+        if (@this.GroupLengths[group] > sectionLength)
         {
-            throw new ArgumentException($"invalid section: must be at least {section.Length} long", nameof(section));
+            throw new ArgumentException($"invalid section: must be at least {@this.GroupLengths[group]} long, but was {sectionLength} long", nameof(section));
         }
 
-        var first = section.IndexOf('#');
+        var first = @this.Springs[section].IndexOf('#');
 
         if (first == -1)
         {
             // all positions are unknown
 
-            return section.Length - groupLength + 1;
+            return sectionLength - @this.GroupLengths[group] + 1;
         }
 
-        var last = section.LastIndexOf('#');
+        var last = @this.Springs[section].LastIndexOf('#');
 
-        var unknownLength = groupLength - (last - first + 1);
+        var unknownLength = @this.GroupLengths[group] - (last - first + 1);
 
         if (unknownLength == 0)
         {
@@ -156,15 +119,8 @@ internal static partial class RecordExtensions
             return 1;
         }
 
-        return Math.Min(first, unknownLength) + Math.Min(section.Length - last - 1, unknownLength);
+        return Math.Min(first, unknownLength) + Math.Min(sectionLength - last - 1, unknownLength);
     }
-
-    #endregion
-
-    #region Helpers
-
-    [GeneratedRegex("[.]+")]
-    private static partial Regex Splitter();
 
     #endregion
 }
